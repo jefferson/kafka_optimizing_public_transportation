@@ -101,7 +101,7 @@ services:
     environment:
       PORT: "8084"
       PROXY: "true"
-      CONNECT_URL: "http://connect:8083"
+      CONNECT_URL: "http://0.0.0.0:8083"
     depends_on:
     - "connect"
 
@@ -112,7 +112,7 @@ services:
     environment:
       PORT: "8085"
       PROXY: "true"
-      KAFKA_REST_PROXY_URL: "http://rest-proxy:8082"
+      KAFKA_REST_PROXY_URL: "http://0.0.0.0:8082"
     depends_on:
     - "rest-proxy"
 
