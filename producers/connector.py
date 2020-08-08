@@ -44,7 +44,7 @@ def configure_connector():
                # TODO
                "incrementing.column.name": "stop_id",
                # TODO
-               "topic.prefix": "postgres-",
+               "topic.prefix": "jdbc.postgres.",
                # TODO
                "poll.interval.ms": "60000",
            }
