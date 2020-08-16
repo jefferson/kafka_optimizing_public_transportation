@@ -22,7 +22,7 @@ class Weather(Producer):
         "status", "sunny partly_cloudy cloudy windy precipitation", start=0
     )
 
-    rest_proxy_url = KafkaEnvoriment.rest_proxy
+    rest_proxy_url = "http://localhost:8082"
 
     key_schema = None
     value_schema = None
@@ -72,34 +72,44 @@ class Weather(Producer):
 
         logger.info("weather kafka proxy integration complete")
 
-        resp = requests.post(
+        testWeatherTopic = requests.get(
 
            f"{Weather.rest_proxy_url}/topics/{self.topic_name}",
+           headers={"Content-Type": "application/json"},
 
-           headers={"Content-Type": "application/vnd.kafka.avro.v2+json"},
-
-           data=json.dumps(
-               {
-                  "value_schema": Weather.value_schema,
-                  "key_schema": Weather.key_schema,
-                  "records": [
-                      {
-                      "value": {"temperature": self.temp, "status": self.status.name},
-                      "key": {"timestamp": self.time_millis()}
-                      }
-                   ]
-               }
-           ),
         )
 
-        try:
+        testWeatherTopic.raise_for_status()
+
+        if("error_code" in testWeatherTopic.json()):
+            resp = requests.post(
+
+            f"{Weather.rest_proxy_url}/topics/{self.topic_name}",
+
+            headers={"Content-Type": "application/vnd.kafka.avro.v2+json"},
+
+            data=json.dumps(
+                {
+                    "value_schema": json.dumps(Weather.value_schema),
+                    "key_schema": json.dumps(Weather.key_schema),
+                    "records": [
+                        {
+                        "value": {"temperature": self.temp, "status": self.status.name},
+                        "key": {"timestamp": self.time_millis()}
+                        }
+                    ]
+                }
+            ),
+            )
+
             resp.raise_for_status()
-        except expression as identifier:
-            logger.info(f"Failed to send data to REST PROXY {json.dump(resp.json(), indent=2)}")
-        
+            
 
-        logger.debug(
-            "sent weather data to kafka, temp: %s, status: %s",
-            self.temp,
-            self.status.name,
-        )
+            logger.debug(
+                "sent weather data to kafka, temp: %s, status: %s",
+                self.temp,
+                self.status.name,
+            )
+        else:
+            logger.debug("Weather topic already exist")
+

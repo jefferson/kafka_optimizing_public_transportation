@@ -31,7 +31,6 @@ class Producer:
         self.num_replicas = 1
 
         self.broker_properties = {
-            "broker.id": 0,
             "zookeeper.connect": "localhost:2181",
             "schema.registry.url": "http://localhost:8081",
             "bootstrap.servers": "PLAINTEXT://localhost:9092"
@@ -45,9 +44,7 @@ class Producer:
         self.producer = AvroProducer({
              'bootstrap.servers': self.broker_properties["bootstrap.servers"], 
              'schema.registry.url': self.broker_properties["schema.registry.url"]
-        },
-        default_key_schema=self.key_schema, default_value_schema=self.value_schema
-        )
+        }, default_key_schema=self.key_schema, default_value_schema=self.value_schema)
 
     def create_topic(self):
         """Creates the producer topic if it does not already exist"""

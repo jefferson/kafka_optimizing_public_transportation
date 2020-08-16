@@ -32,9 +32,11 @@ class KafkaConsumer:
         self.offset_earliest = offset_earliest
 
         self.broker_properties = {
-            "bootstrap.servers": KafkaEnvoriment.boostrap_servers,
-            'group.id': 'group.id',
-            'default.topic.config': {'auto.offset.reset': 'earliest'}
+            'bootstrap.servers': 'PLAINTEXT://localhost:9092',
+            'group.id': 'font-end-consumer',
+            'default.topic.config': {
+                'auto.offset.reset': 'earliest'
+            },
         }
 
         if offset_earliest:
@@ -57,7 +59,7 @@ class KafkaConsumer:
         logger.info("on_assign is complete - call them init")
 
         for partition in partitions:
-            if self.offset_earliest:
+            if self.offset_earliest == True:
                 partition.offset = OFFSET_BEGINNING
         
         logger.info("partitions assigned for %s", self.topic_name_pattern)
@@ -82,7 +84,10 @@ class KafkaConsumer:
         #
         
         try:
-            message = self.consumer.poll(1.0)
+            message = self.consumer.poll(self.consume_timeout)
+        except SerializerError as e:
+            print("Message deserialization failed for {}: {}".format(msg, e))
+            return 0
         except Exception as e:
             logger.error(f"Poll Exception {e}")
             return 0
