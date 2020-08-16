@@ -9,8 +9,6 @@ from confluent_kafka.avro import AvroProducer
 
 logger = logging.getLogger(__name__)
 
-from configs.KafkaEnvoriment import KafkaEnvoriment
-
 class Producer:
     """Defines and provides common functionality amongst Producers"""
 
@@ -29,12 +27,14 @@ class Producer:
         self.topic_name = topic_name
         self.key_schema = key_schema
         self.value_schema = value_schema
-        self.num_partitions = num_partitions
-        self.num_replicas = num_replicas
+        self.num_partitions = 1
+        self.num_replicas = 1
 
         self.broker_properties = {
-            "bootstrap.servers": KafkaEnvoriment.boostrap_servers,
-            "schema.registry.url": KafkaEnvoriment.schema_registry_url
+            "broker.id": 0,
+            "zookeeper.connect": "localhost:2181",
+            "schema.registry.url": "http://localhost:8081",
+            "bootstrap.servers": "PLAINTEXT://localhost:9092"
         }
 
         # If the topic does not already exist, try to create it
@@ -42,24 +42,25 @@ class Producer:
             self.create_topic()
             Producer.existing_topics.add(self.topic_name)
 
-        self.producer = AvroProducer(
-            self.broker_properties,
-            default_key_schema  = self.key_schema,
-            default_value_schema  = self.value_schema
+        self.producer = AvroProducer({
+             'bootstrap.servers': self.broker_properties["bootstrap.servers"], 
+             'schema.registry.url': self.broker_properties["schema.registry.url"]
+        },
+        default_key_schema=self.key_schema, default_value_schema=self.value_schema
         )
 
     def create_topic(self):
         """Creates the producer topic if it does not already exist"""
 
-        client = AdminClient({"bootstrap.servers": self.broker_properties["boostrap.servers"]})
+        client = AdminClient({"bootstrap.servers": self.broker_properties["bootstrap.servers"]})
 
-        new_topic = [NewTopic(
+        new_topic = NewTopic(
             self.topic_name,
             num_partitions=self.num_partitions,
             replication_factor=self.num_replicas
-        )]
+        )
 
-        future = client.create_topic(new_topic)
+        future = client.create_topics([new_topic])
 
         for _, future in future.items():
             try:
@@ -74,13 +75,12 @@ class Producer:
 
     def close(self):
         """Prepares the producer for exit by cleaning up the producer"""
-        #
-        #
-        # TODO: Write cleanup code for the Producer here
-        #
-        #
+
+        self.producer.flush(timeout=10)
+        self.producer.close()
         
-        logger.info("There is nothing to do here")
+        logger.info("Code for Producer cleaned")
+        return
 
     def time_millis(self):
         """Use this function to get the key for Kafka Events"""

@@ -30,15 +30,15 @@ class TransformedStation(faust.Record):
 
 # TODO: Define a Faust Stream that ingests data from the Kafka Connect stations topic and
 #   places it into a new topic with only the necessary information.
-app = faust.App("stations-stream", broker="kafka://localhost:9092", store="memory://")
+app = faust.App("stations-stream", broker=["kafka://localhost:9092","kafka://localhost:9093","kafka://localhost:9094"], store="memory://")
 # TODO: Define the input Kafka Topic. Hint: What topic did Kafka Connect output to?
-input_topic = app.topic("jdbc.postgres.stations", value_type=Station)
+input_topic = app.topic("org.chicago.cta.stations", value_type=Station)
 # TODO: Define the output Kafka Topic
-out_topic = app.topic("faust.stations.transformed", partitions=1)
+out_topic = app.topic("org.chicago.cta.stations.table.v1", partitions=1)
 # TODO: Define a Faust Table
 table = app.Table(
-   "stations.transformation.table",
-   default=int,
+   name="org.stations.transformation.table.v1",
+   default=TransformedStation,
    partitions=1,
    changelog_topic=out_topic,
 )
@@ -71,7 +71,9 @@ async def stationsEvents(stations):
             line = station_transformed_line
         )
 
-        await out_topic.send(value=current_station)
+        table[station.station_id] = current_station
+
+      #  await out_topic.send(value=current_station)
 
 if __name__ == "__main__":
     app.main()

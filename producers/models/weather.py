@@ -30,7 +30,7 @@ class Weather(Producer):
     winter_months = set((0, 1, 2, 3, 10, 11))
     summer_months = set((6, 7, 8))
 
-    topic_name = "weather"
+    topic_name = "org.chicago.cta.weather.v1"
 
     def __init__(self, month):
 
@@ -82,17 +82,21 @@ class Weather(Producer):
                {
                   "value_schema": Weather.value_schema,
                   "key_schema": Weather.key_schema,
-                  "records": [{
-                      "value": {
-                          "temp": self.temp,
-                          "status": self.status.name
+                  "records": [
+                      {
+                      "value": {"temperature": self.temp, "status": self.status.name},
+                      "key": {"timestamp": self.time_millis()}
                       }
-                    }
                    ]
                }
            ),
         )
-        resp.raise_for_status()
+
+        try:
+            resp.raise_for_status()
+        except expression as identifier:
+            logger.info(f"Failed to send data to REST PROXY {json.dump(resp.json(), indent=2)}")
+        
 
         logger.debug(
             "sent weather data to kafka, temp: %s, status: %s",

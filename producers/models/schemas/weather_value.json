@@ -1,9 +1,9 @@
 {
-  "namespace": "udacity.com",
+  "namespace": "com.transport",
   "type": "record",
   "name": "weather.value",
   "fields":[
-    {"name": "temperature", "type": "string"},
+    {"name": "temperature", "type": "float"},
     {"name": "stauts", "type": "string"}
   ]
 }
