@@ -52,7 +52,7 @@ table = app.Table(
 #
 @app.agent(input_topic)
 async def stationsEvents(stations):
-    async for station in stations.group_by(Station.station_id):
+    async for station in stations:
         station_transformed_line = ""
         if(station.red == True):
             station_transformed_line = "red"
@@ -72,7 +72,7 @@ async def stationsEvents(stations):
 
         table[station.station_id] = current_station
 
-        await out_topic.send(key=station.station_id, value=current_station)
+        await out_topic.send(value=current_station)
 
 if __name__ == "__main__":
     app.main()

@@ -54,10 +54,10 @@ class Producer:
         new_topic = NewTopic(
             self.topic_name,
             num_partitions=self.num_partitions,
-            replication_factor=self.num_replicas
+            replication_factor=self.num_replicas,
         )
 
-        future = client.create_topics([new_topic])
+        future = client.create_topics([new_topic], request_timeout = 30)
 
         for _, future in future.items():
             try:

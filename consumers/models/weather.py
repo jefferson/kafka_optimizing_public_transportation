@@ -1,6 +1,6 @@
 """Contains functionality related to Weather"""
 import logging
-
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class Weather:
         logger.info("handler weather - the winter is comming")
 
         try:
-            value = json.loads(message.value())
+            value = json.loads(json.dumps(message.value()))
             self.temperature = value.get("temperature")
             self.status = value.get("status")
         except Exception as e:

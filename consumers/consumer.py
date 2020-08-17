@@ -22,7 +22,7 @@ class KafkaConsumer:
         is_avro=True,
         offset_earliest=False,
         sleep_secs=1.0,
-        consume_timeout=0.1,
+        consume_timeout=1.0,
     ):
         """Creates a consumer object for asynchronous use"""
         self.topic_name_pattern = topic_name_pattern
@@ -39,30 +39,39 @@ class KafkaConsumer:
             },
         }
 
-        if offset_earliest:
-            self.broker_properties['auto.offset.reset'] = 'earliest'
-
         if is_avro is True:
-            self.broker_properties["schema.registry.url"] = "http://localhost:8081"
-            self.consumer = AvroConsumer(self.broker_properties)
+            self.consumer = AvroConsumer({
+                'bootstrap.servers': 'PLAINTEXT://localhost:9092',
+                'group.id': 'font-end-consumer',
+                'default.topic.config': {
+                    'auto.offset.reset': 'earliest'
+                },
+                'schema.registry.url': 'http://localhost:8081'
+            })
         else:
-             self.consumer = Consumer(self.broker_properties)
+            self.consumer = Consumer({
+                'bootstrap.servers': 'PLAINTEXT://localhost:9092',
+                'group.id': 'font-end-consumer',
+                'default.topic.config': {
+                    'auto.offset.reset': 'earliest'
+                },
+            })
 
-        self.consumer.subscribe([self.topic_name_pattern], on_assign=self.on_assign)
+        self.consumer.subscribe(
+            [self.topic_name_pattern], on_assign=self.on_assign)
 
     def on_assign(self, consumer, partitions):
         """Callback for when topic assignment takes place"""
 
         # If the topic is configured to use `offset_earliest` set the partition offset to
         # the beginning or earliest
+        for partition in partitions:
+            partition.offset = OFFSET_BEGINNING
 
         logger.info("on_assign is complete - call them init")
 
-        for partition in partitions:
-            if self.offset_earliest == True:
-                partition.offset = OFFSET_BEGINNING
-        
         logger.info("partitions assigned for %s", self.topic_name_pattern)
+
         consumer.assign(partitions)
 
     async def consume(self):
@@ -82,11 +91,11 @@ class KafkaConsumer:
         # is retrieved.
         #
         #
-        
+
         try:
             message = self.consumer.poll(self.consume_timeout)
         except SerializerError as e:
-            print("Message deserialization failed for {}: {}".format(msg, e))
+            print("Message deserialization failed for {}: {}".format(message, e))
             return 0
         except Exception as e:
             logger.error(f"Poll Exception {e}")
@@ -100,12 +109,12 @@ class KafkaConsumer:
             return 0
         else:
             try:
-                self.message_handler(msg)
+                logger.info("> Message received by consumer")
+                self.message_handler(message)
                 return 1
             except KeyError as e:
                 logger.info(f"Failed to unpack message {e}")
                 return 0
-
 
     def close(self):
         """Cleans up any open kafka consumers"""
