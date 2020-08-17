@@ -35,7 +35,7 @@ class Weather(Producer):
     def __init__(self, month):
 
         super().__init__(
-            self.topic_name, # TODO: Come up with a better topic name
+            self.topic_name,  # TODO: Come up with a better topic name
             key_schema=Weather.key_schema,
             value_schema=Weather.value_schema,
             num_partitions=KafkaEnvoriment.default_partitions,
@@ -64,7 +64,8 @@ class Weather(Producer):
             mode = -1.0
         elif month in Weather.summer_months:
             mode = 1.0
-        self.temp += min(max(-20.0, random.triangular(-10.0, 10.0, mode)), 100.0)
+        self.temp += min(max(-20.0,
+                             random.triangular(-10.0, 10.0, mode)), 100.0)
         self.status = random.choice(list(Weather.status))
 
     def run(self, month):
@@ -72,44 +73,27 @@ class Weather(Producer):
 
         logger.info("weather kafka proxy integration complete")
 
-        testWeatherTopic = requests.get(
+        data = {
+            "key_schema": json.dumps(Weather.key_schema),
+            "value_schema": json.dumps(Weather.value_schema),
+            "records": [
+                {
+                    "value": {"temperature": float(self.temp), "status": self.status.name},
+                    "key": {"timestamp": self.time_millis()}
+                }
+            ]
+        }
 
-           f"{Weather.rest_proxy_url}/topics/{self.topic_name}",
-           headers={"Content-Type": "application/json"},
-
+        resp = requests.post(
+            f"{Weather.rest_proxy_url}/topics/{self.topic_name}",
+            headers={"Content-Type": "application/vnd.kafka.avro.v2+json"},
+            data=json.dumps(data)
         )
 
-        testWeatherTopic.raise_for_status()
+        resp.raise_for_status()
 
-        if("error_code" in testWeatherTopic.json()):
-            resp = requests.post(
-
-            f"{Weather.rest_proxy_url}/topics/{self.topic_name}",
-
-            headers={"Content-Type": "application/vnd.kafka.avro.v2+json"},
-
-            data=json.dumps(
-                {
-                    "value_schema": json.dumps(Weather.value_schema),
-                    "key_schema": json.dumps(Weather.key_schema),
-                    "records": [
-                        {
-                        "value": {"temperature": self.temp, "status": self.status.name},
-                        "key": {"timestamp": self.time_millis()}
-                        }
-                    ]
-                }
-            ),
-            )
-
-            resp.raise_for_status()
-            
-
-            logger.debug(
-                "sent weather data to kafka, temp: %s, status: %s",
-                self.temp,
-                self.status.name,
-            )
-        else:
-            logger.debug("Weather topic already exist")
-
+        logger.debug(
+            "sent weather data to kafka, temp: %s, status: %s",
+            self.temp,
+            self.status.name,
+        )
