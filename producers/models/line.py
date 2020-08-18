@@ -8,7 +8,6 @@ from models import Station, Train
 
 logger = logging.getLogger(__name__)
 
-
 class Line:
     """Contains Chicago Transit Authority (CTA) Elevated Loop Train ("L") Station Data"""
 

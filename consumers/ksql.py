@@ -20,19 +20,10 @@ KSQL_URL = "http://localhost:8088"
 #       `turnstile` table and grouping on station_id.
 #       Make sure to cast the COUNT of station id to `count`
 #       Make sure to set the value format to JSON
-
-KSQL_STATEMENT = """
-CREATE TABLE turnstile (
-    ???
-) WITH (
-    ???
-);
-
-CREATE TABLE turnstile_summary
-WITH (???) AS
-    ???
+ 
+KSQL_STATEMENT = """CREATE TABLE turnstile (STATION_ID INTEGER, STATION_NAME VARCHAR, LINE VARCHAR) WITH ( KAFKA_TOPIC='org.chicago.cta.turnstile.v1', VALUE_FORMAT='avro', key='STATION_ID');
+CREATE TABLE turnstile_summary WITH (KAFKA_TOPIC='TURNSTILE_SUMMARY',VALUE_FORMAT='json') AS SELECT STATION_ID, STATION_NAME, COUNT(STATION_ID) as COUNT FROM turnstile GROUP BY STATION_ID, STATION_NAME;
 """
-
 
 def execute_statement():
     """Executes the KSQL statement against the KSQL API"""
@@ -40,6 +31,14 @@ def execute_statement():
         return
 
     logging.debug("executing ksql statement...")
+    data = json.dumps(
+            {
+                "ksql": json.dumps(KSQL_STATEMENT),
+                "streamsProperties": {"ksql.streams.auto.offset.reset": "earliest"},
+            }
+        )
+    
+    print(data)
 
     resp = requests.post(
         f"{KSQL_URL}/ksql",
@@ -53,7 +52,12 @@ def execute_statement():
     )
 
     # Ensure that a 2XX status code was returned
-    resp.raise_for_status()
+    try:
+        resp.raise_for_status()
+    except requests.exceptions.HTTPError as identifier:
+        print(identifier)
+        print(str(resp.content))
+        logger.info("Error with KSQL POST request.")
 
 
 if __name__ == "__main__":
